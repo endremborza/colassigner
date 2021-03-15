@@ -1,6 +1,6 @@
 [project]
 name = "colassigner"
-description = "My little project."
+description = "Helper for assigning pandas columns"
 authors = [
     "Endre Márk Borza"
 ]
