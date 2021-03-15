@@ -27,7 +27,7 @@ if __name__ == "__main__":
         license="MIT",
         classifiers=["License :: OSI Approved :: MIT License"],
         url=pytom["project"]["url"],
-        keywords=pytom["project"].get("keywords"),
+        keywords=pytom["project"].get("keywords", []),
         author=author_name,
         packages=find_packages(),
         include_package_data=True,
