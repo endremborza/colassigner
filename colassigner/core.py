@@ -30,7 +30,8 @@ class ColAssigner(Mapping, metaclass=ColMeta):
 
     def _add_callables(self):
         for mid in self.__dir__():
-            if not mid.startswith("_") and (mid not in dic_methods):
-                m = getattr(self, mid)
-                if callable(m):
-                    self._callables[mid] = m
+            if mid.startswith("_") or (mid in dic_methods):
+                continue
+            m = getattr(self, mid)
+            if callable(m):
+                self._callables[mid] = m
