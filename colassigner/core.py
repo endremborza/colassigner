@@ -12,7 +12,9 @@ class ColMeta(ABCMeta):
 
 
 class ColAssigner(Mapping, metaclass=ColMeta):
-    """define functions that create columns in a dataframe"""
+    """define functions that create columns in a dataframe
+    
+    later the class atributes can be used to access the column"""
 
     def __init__(self):
         self._callables = {}
