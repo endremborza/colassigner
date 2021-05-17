@@ -13,7 +13,7 @@ class ColMeta(ABCMeta):
 
 class ColAssigner(Mapping, metaclass=ColMeta):
     """define functions that create columns in a dataframe
-    
+
     later the class atributes can be used to access the column"""
 
     def __init__(self):
@@ -35,5 +35,8 @@ class ColAssigner(Mapping, metaclass=ColMeta):
             if mid.startswith("_") or (mid in dic_methods):
                 continue
             m = getattr(self, mid)
-            if callable(m):
-                self._callables[mid] = m
+            self._callables[mid] = m
+
+
+def allcols(cls):
+    return [c for c in cls.__dict__.keys() if not c.startswith("_")]

@@ -1,1 +1,1 @@
-- first release of colassigner, yay!!
+- points of whats new
