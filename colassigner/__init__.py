@@ -1,2 +1,3 @@
-from ._version import __version__  # noqa: F401
-from .core import ColAssigner, allcols  # noqa: F401
+# flake8: noqa
+from ._version import __version__
+from .core import CALL_RECORDS, ColAssigner, allcols, get_cr_graph
