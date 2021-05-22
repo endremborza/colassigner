@@ -8,6 +8,7 @@ Welcome to colassigner's documentation!
 
    notebooks/doc-000-intro
    notebooks/doc-001-quickstart
+   notebooks/doc-003-drawing
    autosumm
    release_notes/main
 
