@@ -8,6 +8,12 @@ dic_methods = ["get", "keys", "items", "values"]
 CALL_RECORDS = []
 CURRENT_CALLER: Optional["CurrentCaller"] = None
 
+PP_ATT_NAME = "__parent_prefixes__"
+PREFIX_ATT_NAME = "_prefix"
+DEFAULT_PREFIX = ""
+DEFAULT_PP = ()
+PREFIX_SEP = "__"
+
 
 @dataclass
 class CurrentCaller:
@@ -50,10 +56,29 @@ class ColMeta(ABCMeta):
         return attid
 
 
+class ColAccMeta(ABCMeta):
+    def __init__(cls, name, bases, dict):
+        prefix = dict.get(PREFIX_ATT_NAME, DEFAULT_PREFIX)
+        parent_prefs = dict.get(PP_ATT_NAME, DEFAULT_PP)
+        for k, v in dict.items():
+            if isinstance(v, ColAccMeta):
+                new_pp = tuple(p for p in [*parent_prefs, prefix] if p)
+                setattr(v, PP_ATT_NAME, new_pp)
+        return super().__init__(name, bases, dict)
+
+    def __getattribute__(cls, name):
+        out = super().__getattribute__(name)
+        pref = super().__getattribute__(PREFIX_ATT_NAME)
+        parent_prefs = super().__getattribute__(PP_ATT_NAME)
+        if isinstance(out, str) and not name.startswith("_"):
+            return PREFIX_SEP.join([*parent_prefs, pref, out])
+        return out
+
+
 class ColAssigner(Mapping, metaclass=ColMeta):
     """define functions that create columns in a dataframe
 
-    later the class atributes can be used to access the column"""
+    later the class attributes can be used to access the column"""
 
     def __init__(self):
         self._callables = {}
@@ -75,6 +100,11 @@ class ColAssigner(Mapping, metaclass=ColMeta):
                 continue
             m = getattr(self, mid)
             self._callables[mid] = m
+
+
+class ColAccessor(metaclass=ColAccMeta):
+    __parent_prefixes__ = DEFAULT_PP  # should never be set manually
+    _prefix = DEFAULT_PREFIX
 
 
 def allcols(cls):
