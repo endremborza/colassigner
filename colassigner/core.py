@@ -2,9 +2,10 @@ from abc import ABCMeta
 from collections.abc import Mapping
 from dataclasses import dataclass
 from functools import wraps
-from typing import Optional
+from typing import Optional, Type, Union
 
 dic_methods = ["get", "keys", "items", "values"]
+forbidden_names = [*dic_methods, "mro"]
 CALL_RECORDS = []
 CURRENT_CALLER: Optional["CurrentCaller"] = None
 
@@ -39,13 +40,18 @@ class CallRecord:
 class ColMeta(ABCMeta):
     def __new__(cls, name, bases, local):
         for attr in local:
+            if attr in forbidden_names:
+                raise ValueError(
+                    f"Column name can't be either {forbidden_names}. "
+                    f"{attr} is given"
+                )
             value = local[attr]
             if callable(value) and not attr.startswith("_"):
                 local[attr] = decor_w_current(value, name, attr)
         return type.__new__(cls, name, bases, local)
 
     def __getattribute__(cls, attid):
-        if attid.startswith("_") or (attid in dic_methods):
+        if attid.startswith("_") or (attid in forbidden_names):
             return super().__getattribute__(attid)
         if CURRENT_CALLER is not None:
             CALL_RECORDS.append(
@@ -71,7 +77,7 @@ class ColAccMeta(ABCMeta):
         pref = super().__getattribute__(PREFIX_ATT_NAME)
         parent_prefs = super().__getattribute__(PP_ATT_NAME)
         if isinstance(out, str) and not name.startswith("_"):
-            return PREFIX_SEP.join([*parent_prefs, pref, out])
+            return PREFIX_SEP.join(filter(None, [*parent_prefs, pref, out]))
         return out
 
 
@@ -107,8 +113,22 @@ class ColAccessor(metaclass=ColAccMeta):
     _prefix = DEFAULT_PREFIX
 
 
-def allcols(cls):
-    return [c for c in cls.__dict__.keys() if not c.startswith("_")]
+def allcols(cls: Union[Type[ColAccessor], Type[ColAssigner]]):
+    out = []
+    for attid in dir(cls):
+        if attid.startswith("_") or attid in dic_methods:
+            continue
+        attval = getattr(cls, attid)
+        if isinstance(attval, type) and any(
+            [kls in attval.mro() for kls in [ColAccessor, ColAssigner]]
+        ):
+            out += allcols(attval)
+            continue
+        if ColAccessor in cls.mro():
+            out.append(attval)
+        else:
+            out.append(attid)
+    return out
 
 
 def decor_w_current(f, clsname, attr):
