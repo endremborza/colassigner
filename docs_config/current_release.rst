@@ -1,1 +1,1 @@
-add colaccessor
+extend allcols
