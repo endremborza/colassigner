@@ -1,4 +1,4 @@
-from colassigner import ColAccessor
+from colassigner import ColAccessor, allcols
 
 
 def test_accessor():
@@ -22,3 +22,12 @@ def test_accessor():
     assert TestCols.SubCol.a == "subc__a"
     assert TestCols.SubCol.SubSubCol.x == "subc__ss1__x"
     assert TestCols.SubCol.SubSubCol2.y == "subc__ss2__y"
+    assert allcols(TestCols) == [
+        "subc__ss1__x",
+        "subc__ss1__y",
+        "subc__ss2__x",
+        "subc__ss2__y",
+        "subc__a",
+        "subc__b",
+        "fing",
+    ]
