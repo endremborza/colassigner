@@ -38,6 +38,15 @@ class CallRecord:
 
 
 class ColMeta(ABCMeta):
+    def __init__(cls, name, bases, dict):
+        prefix = dict.get(PREFIX_ATT_NAME, DEFAULT_PREFIX)
+        parent_prefs = dict.get(PP_ATT_NAME, DEFAULT_PP)
+        for k, v in dict.items():
+            if isinstance(v, ColMeta):
+                new_pp = tuple(p for p in [*parent_prefs, prefix] if p)
+                setattr(v, PP_ATT_NAME, new_pp)
+        return super().__init__(name, bases, dict)
+
     def __new__(cls, name, bases, local):
         for attr in local:
             if attr in forbidden_names:
@@ -46,42 +55,48 @@ class ColMeta(ABCMeta):
                     f"{attr} is given"
                 )
             value = local[attr]
-            if callable(value) and not attr.startswith("_"):
+            if (
+                callable(value)
+                and not attr.startswith("_")
+                and not isinstance(value, ColMeta)
+            ):
                 local[attr] = decor_w_current(value, name, attr)
-        return type.__new__(cls, name, bases, local)
+        return super().__new__(cls, name, bases, local)
 
     def __getattribute__(cls, attid):
+
         if attid.startswith("_") or (attid in forbidden_names):
             return super().__getattribute__(attid)
+
+        colval = super().__getattribute__(attid)
+        prefix = super().__getattribute__(PREFIX_ATT_NAME)
+        parent_prefixes = super().__getattribute__(PP_ATT_NAME)
+        if isinstance(colval, ColMeta):
+            return colval
+        elif isinstance(colval, str):
+            colslug = colval
+        else:
+            colslug = attid
+
+        colname = PREFIX_SEP.join(
+            filter(None, [*parent_prefixes, prefix, colslug])
+        )
+
         if CURRENT_CALLER is not None:
             CALL_RECORDS.append(
                 CallRecord(
                     CURRENT_CALLER.cls, cls.__name__, CURRENT_CALLER.att, attid
                 )
             )
-        return attid
+        return colname
 
 
-class ColAccMeta(ABCMeta):
-    def __init__(cls, name, bases, dict):
-        prefix = dict.get(PREFIX_ATT_NAME, DEFAULT_PREFIX)
-        parent_prefs = dict.get(PP_ATT_NAME, DEFAULT_PP)
-        for k, v in dict.items():
-            if isinstance(v, ColAccMeta):
-                new_pp = tuple(p for p in [*parent_prefs, prefix] if p)
-                setattr(v, PP_ATT_NAME, new_pp)
-        return super().__init__(name, bases, dict)
-
-    def __getattribute__(cls, name):
-        out = super().__getattribute__(name)
-        pref = super().__getattribute__(PREFIX_ATT_NAME)
-        parent_prefs = super().__getattribute__(PP_ATT_NAME)
-        if isinstance(out, str) and not name.startswith("_"):
-            return PREFIX_SEP.join(filter(None, [*parent_prefs, pref, out]))
-        return out
+class ColAccessor(metaclass=ColMeta):
+    __parent_prefixes__ = DEFAULT_PP  # should never be set manually
+    _prefix = DEFAULT_PREFIX
 
 
-class ColAssigner(Mapping, metaclass=ColMeta):
+class ColAssigner(Mapping, ColAccessor):
     """define functions that create columns in a dataframe
 
     later the class attributes can be used to access the column"""
@@ -105,12 +120,13 @@ class ColAssigner(Mapping, metaclass=ColMeta):
             if mid.startswith("_") or (mid in dic_methods):
                 continue
             m = getattr(self, mid)
+            if isinstance(m, ColMeta):
+                for k, v in m().items():
+                    colname = getattr(m, v.__name__, k)
+                    self._callables[colname] = v
+                continue
+
             self._callables[mid] = m
-
-
-class ColAccessor(metaclass=ColAccMeta):
-    __parent_prefixes__ = DEFAULT_PP  # should never be set manually
-    _prefix = DEFAULT_PREFIX
 
 
 def allcols(cls: Union[Type[ColAccessor], Type[ColAssigner]]):
@@ -126,8 +142,6 @@ def allcols(cls: Union[Type[ColAccessor], Type[ColAssigner]]):
             continue
         if ColAccessor in cls.mro():
             out.append(attval)
-        else:
-            out.append(attid)
     return out
 
 
