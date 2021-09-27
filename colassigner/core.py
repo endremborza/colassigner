@@ -73,13 +73,9 @@ class ColMeta(ABCMeta):
         parent_prefixes = super().__getattribute__(PP_ATT_NAME)
         if isinstance(colval, ColMeta):
             return colval
-        elif isinstance(colval, str):
-            colslug = colval
-        else:
-            colslug = attid
 
         colname = PREFIX_SEP.join(
-            filter(None, [*parent_prefixes, prefix, colslug])
+            filter(None, [*parent_prefixes, prefix, attid])
         )
 
         if CURRENT_CALLER is not None:
@@ -92,6 +88,24 @@ class ColMeta(ABCMeta):
 
 
 class ColAccessor(metaclass=ColMeta):
+    """describe raw columns with datatypes
+    
+    other than types to describe column type,
+    attributes can be used to describe
+
+    - a foreign key, if it is a string
+    - nested structure, if it is another ColAccessor class
+
+    class TableCols(ColAccessor):
+        col1 = int
+        col2 = str
+        foreign_key1 = "name_of_key"
+
+        class SubCols(ColAccessor):
+            _prefix = "something"  # sets prefix
+            ...
+
+    """
     __parent_prefixes__ = DEFAULT_PP  # should never be set manually
     _prefix = DEFAULT_PREFIX
 

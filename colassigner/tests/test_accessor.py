@@ -4,17 +4,17 @@ from colassigner import ColAccessor, allcols
 def test_accessor():
     class TestCols(ColAccessor):
 
-        fing = "fing"
+        fing = int
 
         class SubCol(ColAccessor):
             _prefix = "subc"
-            a = "a"
-            b = "b"
+            a = int
+            b = float
 
             class SubSubCol(ColAccessor):
                 _prefix = "ss1"
-                x = "x"
-                y = "y"
+                x = str
+                y = str
 
             class SubSubCol2(SubSubCol):
                 _prefix = "ss2"
@@ -31,3 +31,17 @@ def test_accessor():
         "subc__b",
         "fing",
     ]
+
+
+def test_accessor_id_cols():
+    
+    class IdCols(ColAccessor):
+
+        fing_id = int
+        other_id = str
+    
+    class TableCols(ColAccessor):
+
+        foreign_key = IdCols.fing_id
+    
+    assert TableCols.foreign_key == "foreign_key"
