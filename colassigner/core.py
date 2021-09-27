@@ -89,7 +89,7 @@ class ColMeta(ABCMeta):
 
 class ColAccessor(metaclass=ColMeta):
     """describe raw columns with datatypes
-    
+
     other than types to describe column type,
     attributes can be used to describe
 
@@ -106,6 +106,7 @@ class ColAccessor(metaclass=ColMeta):
             ...
 
     """
+
     __parent_prefixes__ = DEFAULT_PP  # should never be set manually
     _prefix = DEFAULT_PREFIX
 

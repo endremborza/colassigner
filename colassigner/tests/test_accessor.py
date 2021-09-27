@@ -34,14 +34,13 @@ def test_accessor():
 
 
 def test_accessor_id_cols():
-    
     class IdCols(ColAccessor):
 
         fing_id = int
         other_id = str
-    
+
     class TableCols(ColAccessor):
 
         foreign_key = IdCols.fing_id
-    
+
     assert TableCols.foreign_key == "foreign_key"
