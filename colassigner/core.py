@@ -49,17 +49,21 @@ class ColMeta(ABCMeta):
 
     def __new__(cls, name, bases, local):
         for attr in local:
-            if attr in forbidden_names:
+            if (attr in forbidden_names) or (
+                PREFIX_SEP in attr and not attr.startswith("_")
+            ):
                 raise ValueError(
                     f"Column name can't be either {forbidden_names}. "
+                    f"And can't contain the string {PREFIX_SEP}. "
                     f"{attr} is given"
                 )
             value = local[attr]
             if (
                 callable(value)
                 and not attr.startswith("_")
-                and not isinstance(value, ColMeta)
+                and not isinstance(value, type)
             ):
+                # TODO: all this drawing needs to be revisited
                 local[attr] = decor_w_current(value, name, attr)
         return super().__new__(cls, name, bases, local)
 
@@ -85,6 +89,10 @@ class ColMeta(ABCMeta):
                 )
             )
         return colname
+
+    def __getcoltype__(cls, attid):
+        colval = super().__getattribute__(attid.split(PREFIX_SEP)[-1])
+        return colval
 
 
 class ColAccessor(metaclass=ColMeta):
@@ -158,6 +166,10 @@ def allcols(cls: Union[Type[ColAccessor], Type[ColAssigner]]):
         if ColAccessor in cls.mro():
             out.append(attval)
     return out
+
+
+def get_col_type(accessor: Type[ColAccessor], attname: str):
+    return accessor.__getcoltype__(attname)
 
 
 def decor_w_current(f, clsname, attr):
