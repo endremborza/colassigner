@@ -1,188 +1,123 @@
-from abc import ABCMeta
-from collections.abc import Mapping
-from dataclasses import dataclass
-from functools import wraps
-from typing import Optional, Type, Union
+from typing import Type, Union
 
-dic_methods = ["get", "keys", "items", "values"]
-forbidden_names = [*dic_methods, "mro"]
-CALL_RECORDS = []
-CURRENT_CALLER: Optional["CurrentCaller"] = None
-
-PP_ATT_NAME = "__parent_prefixes__"
-PREFIX_ATT_NAME = "_prefix"
-DEFAULT_PREFIX = ""
-DEFAULT_PP = ()
-PREFIX_SEP = "__"
-
-
-@dataclass
-class CurrentCaller:
-    cls: str
-    att: str
-
-
-@dataclass
-class CallRecord:
-    caller_cls: str
-    called_cls: str
-    caller_att: str
-    called_att: str
-
-    @property
-    def edge(self):
-        return {
-            "to": ".".join([self.caller_cls, self.caller_att]),
-            "from": ".".join([self.called_cls, self.called_att]),
-        }
-
-
-class ColMeta(ABCMeta):
-    def __init__(cls, name, bases, dict):
-        prefix = dict.get(PREFIX_ATT_NAME, DEFAULT_PREFIX)
-        parent_prefs = dict.get(PP_ATT_NAME, DEFAULT_PP)
-        for k, v in dict.items():
-            if isinstance(v, ColMeta):
-                new_pp = tuple(p for p in [*parent_prefs, prefix] if p)
-                setattr(v, PP_ATT_NAME, new_pp)
-        return super().__init__(name, bases, dict)
-
-    def __new__(cls, name, bases, local):
-        for attr in local:
-            if (attr in forbidden_names) or (
-                PREFIX_SEP in attr and not attr.startswith("_")
-            ):
-                raise ValueError(
-                    f"Column name can't be either {forbidden_names}. "
-                    f"And can't contain the string {PREFIX_SEP}. "
-                    f"{attr} is given"
-                )
-            value = local[attr]
-            if (
-                callable(value)
-                and not attr.startswith("_")
-                and not isinstance(value, type)
-            ):
-                # TODO: all this drawing needs to be revisited
-                local[attr] = decor_w_current(value, name, attr)
-        return super().__new__(cls, name, bases, local)
-
-    def __getattribute__(cls, attid):
-
-        if attid.startswith("_") or (attid in forbidden_names):
-            return super().__getattribute__(attid)
-
-        colval = super().__getattribute__(attid)
-        prefix = super().__getattribute__(PREFIX_ATT_NAME)
-        parent_prefixes = super().__getattribute__(PP_ATT_NAME)
-        if isinstance(colval, ColMeta):
-            return colval
-
-        colname = PREFIX_SEP.join(
-            filter(None, [*parent_prefixes, prefix, attid])
-        )
-
-        if CURRENT_CALLER is not None:
-            CALL_RECORDS.append(
-                CallRecord(
-                    CURRENT_CALLER.cls, cls.__name__, CURRENT_CALLER.att, attid
-                )
-            )
-        return colname
-
-    def __getcoltype__(cls, attid):
-        colval = super().__getattribute__(attid.split(PREFIX_SEP)[-1])
-        return colval
+from .constants import PREFIX_SEP
+from .meta_base import ColMeta
+from .util import camel_to_snake
 
 
 class ColAccessor(metaclass=ColMeta):
-    """describe raw columns with datatypes
+    """describe and access raw columns
 
-    other than types to describe column type,
-    attributes can be used to describe
+    useful for
+    - getting column names from static analysis
+    - documenting types
+    - dry describing nested structures
 
-    - a foreign key, if it is a string
-    - nested structure, if it is another ColAccessor class
+    e. g.
+
+    class LocationCols(ColAccessor):
+        lon = float
+        lat = float
 
     class TableCols(ColAccessor):
         col1 = int
         col2 = str
         foreign_key1 = "name_of_key"
 
-        class SubCols(ColAccessor):
-            _prefix = "something"  # sets prefix
-            ...
+        class NestedCols(ColAccessor):
+            s = str
+            x = float
+
+        start_loc = LocationCols
+        end_loc = LocationCols
+
+    >>> TableCols.start_loc.lat
+    'start_loc__lat'
 
     """
 
-    __parent_prefixes__ = DEFAULT_PP  # should never be set manually
-    _prefix = DEFAULT_PREFIX
 
-
-class ColAssigner(Mapping, ColAccessor):
+class ColAssigner(ColAccessor):
     """define functions that create columns in a dataframe
 
-    later the class attributes can be used to access the column"""
+    later the class attributes can be used to access the column
+    can be used to created nested structures of columns
 
-    def __init__(self):
-        self._callables = {}
-        self._add_callables()
+    either by assigning or inheriting within:
 
-    def __getitem__(self, key):
-        return self._callables[key]
+    class MyStaticChildAssigner(ColAssigner):
 
-    def __iter__(self):
-        for k in self._callables.keys():
-            yield k
+        pass
 
-    def __len__(self):
-        return len(self._callables)
+    class MyAssigner(ColAssigner):
 
-    def _add_callables(self):
-        for mid in self.__dir__():
-            if mid.startswith("_") or (mid in dic_methods):
+        class MySubAssigner(ColAssigner):
+            pass
+
+        chass1 = MyStaticChildAssigner
+    """
+
+    def __call__(self, df, carried_prefixes=()):
+        # dir() is alphabetised object.__dir__ is not
+        # important here if assigned cols rely on each other
+        for attid in self.__dir__():
+            if attid.startswith("_"):
                 continue
-            m = getattr(self, mid)
-            if isinstance(m, ColMeta):
-                for k, v in m().items():
-                    colname = getattr(m, v.__name__, k)
-                    self._callables[colname] = v
-                continue
+            att = getattr(self, attid)
+            new_pref_arr = (*carried_prefixes, camel_to_snake(attid))
+            if isinstance(att, ColMeta):
+                if ChildColAssigner in att.mro():
+                    inst = att(df, self)
+                else:
+                    inst = att()
+                df = inst(df, carried_prefixes=new_pref_arr)
+            elif callable(att):
+                colname = PREFIX_SEP.join(new_pref_arr)
+                df = df.assign(**{colname: self._call_att(att, df)})
+        return df
 
-            self._callables[mid] = m
+    @staticmethod
+    def _call_att(att, df):
+        return att(df)
 
 
-def allcols(cls: Union[Type[ColAccessor], Type[ColAssigner]]):
+class ChildColAssigner(ColAssigner):
+    """assigner specifically for nested structures
+
+    methods of these are not called with parameters
+
+    the dataframe and the parent assigner are passed
+    to the __init__ method as parameters
+    """
+
+    def __init__(self, df, parent_assigner: ColAssigner) -> None:
+        pass
+
+    @staticmethod
+    def _call_att(att, _):
+        return att()
+
+
+def get_all_cols(cls: Union[Type[ColAccessor], Type[ColAssigner]]):
+    """returns a list of strings of all columns given by the type
+
+    can also be used for nested structues of columns
+    """
     out = []
     for attid in dir(cls):
-        if attid.startswith("_") or attid in dic_methods:
+        if attid.startswith("_"):
             continue
         attval = getattr(cls, attid)
         if isinstance(attval, type) and any(
             [kls in attval.mro() for kls in [ColAccessor, ColAssigner]]
         ):
-            out += allcols(attval)
+            out += get_all_cols(attval)
             continue
         if ColAccessor in cls.mro():
             out.append(attval)
     return out
 
 
-def get_col_type(accessor: Type[ColAccessor], attname: str):
+def get_att_value(accessor: Type[ColAccessor], attname: str):
+    """get the true assigned value for the class attribute"""
     return accessor.__getcoltype__(attname)
-
-
-def decor_w_current(f, clsname, attr):
-    @wraps(f)
-    def wrapper(*args, **kwds):
-        global CURRENT_CALLER
-        CURRENT_CALLER = CurrentCaller(clsname, attr)
-        out = f(*args, **kwds)
-        CURRENT_CALLER = None
-        return out
-
-    return wrapper
-
-
-def get_cr_graph():
-    return [cr.edge for cr in CALL_RECORDS]
