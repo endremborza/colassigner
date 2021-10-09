@@ -1,36 +1,67 @@
-from colassigner import ColAccessor, allcols
+from colassigner import ColAccessor, get_all_cols
 
 
-def test_accessor():
-    class TestCols(ColAccessor):
+def test_flat_accessor():
+    class Cols(ColAccessor):
+        x = int
+        a = float
+
+    assert Cols.x == "x"
+    assert Cols.a == "a"
+
+
+def test_nested_accessor():
+    class GrandChildCols(ColAccessor):
+        x = str
+        y = str
+
+    class ChildCols(ColAccessor):
+        a = int
+        b = float
+        grandchild_a = GrandChildCols
+        grandchild_b = GrandChildCols
+
+    class Cols(ColAccessor):
 
         fing = int
+        assigned_child = ChildCols
 
-        class SubCol(ColAccessor):
-            _prefix = "subc"
-            a = int
-            b = float
+        class InheritedChild(ChildCols):
+            pass
 
-            class SubSubCol(ColAccessor):
-                _prefix = "ss1"
-                x = str
-                y = str
+    assert Cols.fing == "fing"
+    assert Cols.assigned_child.a == "assigned_child__a"
+    assert (
+        Cols.assigned_child.grandchild_a.x == "assigned_child__grandchild_a__x"
+    )
+    assert (
+        Cols.assigned_child.grandchild_b.y == "assigned_child__grandchild_b__y"
+    )
+    assert Cols.InheritedChild.b == "inherited_child__b"
 
-            class SubSubCol2(SubSubCol):
-                _prefix = "ss2"
-
-    assert TestCols.fing == "fing"
-    assert TestCols.SubCol.a == "subc__a"
-    assert TestCols.SubCol.SubSubCol.x == "subc__ss1__x"
-    assert TestCols.SubCol.SubSubCol2.y == "subc__ss2__y"
-    assert allcols(TestCols) == [
-        "subc__ss1__x",
-        "subc__ss1__y",
-        "subc__ss2__x",
-        "subc__ss2__y",
-        "subc__a",
-        "subc__b",
+    assert get_all_cols(Cols) == [
+        "inherited_child__a",
+        "inherited_child__b",
+        "inherited_child__grandchild_a__x",
+        "inherited_child__grandchild_a__y",
+        "inherited_child__grandchild_b__x",
+        "inherited_child__grandchild_b__y",
+        "assigned_child__a",
+        "assigned_child__b",
+        "assigned_child__grandchild_a__x",
+        "assigned_child__grandchild_a__y",
+        "assigned_child__grandchild_b__x",
+        "assigned_child__grandchild_b__y",
         "fing",
+    ]
+
+    assert get_all_cols(Cols.assigned_child) == [
+        "assigned_child__a",
+        "assigned_child__b",
+        "assigned_child__grandchild_a__x",
+        "assigned_child__grandchild_a__y",
+        "assigned_child__grandchild_b__x",
+        "assigned_child__grandchild_b__y",
     ]
 
 
