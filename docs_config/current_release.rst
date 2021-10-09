@@ -1,2 +1,5 @@
-change base structure to dry it a bit
-add col type retention
+- rethink nested structures
+- do away with .assign(**CA()) pattern
+- replace with .pipe(CA())
+- put aside graph generation for a while
+- add proper docs
