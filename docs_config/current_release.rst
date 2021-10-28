@@ -1,5 +1,1 @@
-- rethink nested structures
-- do away with .assign(**CA()) pattern
-- replace with .pipe(CA())
-- put aside graph generation for a while
-- add proper docs
+multidigit number fix
