@@ -1,5 +1,3 @@
-from typing import Type, Union
-
 from .constants import PREFIX_SEP
 from .meta_base import ColMeta
 from .util import camel_to_snake
@@ -72,7 +70,8 @@ class ColAssigner(ColAccessor):
                     inst = att()
                 df = inst(df, carried_prefixes=new_pref_arr)
             elif callable(att):
-                colname = PREFIX_SEP.join(new_pref_arr)
+                col_name = getattr(type(self), attid)
+                colname = PREFIX_SEP.join((*carried_prefixes, col_name))
                 df = df.assign(**{colname: self._call_att(att, df)})
         return df
 
@@ -96,28 +95,3 @@ class ChildColAssigner(ColAssigner):
     @staticmethod
     def _call_att(att, _):
         return att()
-
-
-def get_all_cols(cls: Union[Type[ColAccessor], Type[ColAssigner]]):
-    """returns a list of strings of all columns given by the type
-
-    can also be used for nested structues of columns
-    """
-    out = []
-    for attid in dir(cls):
-        if attid.startswith("_"):
-            continue
-        attval = getattr(cls, attid)
-        if isinstance(attval, type) and any(
-            [kls in attval.mro() for kls in [ColAccessor, ColAssigner]]
-        ):
-            out += get_all_cols(attval)
-            continue
-        if ColAccessor in cls.mro():
-            out.append(attval)
-    return out
-
-
-def get_att_value(accessor: Type[ColAccessor], attname: str):
-    """get the true assigned value for the class attribute"""
-    return accessor.__getcoltype__(attname)

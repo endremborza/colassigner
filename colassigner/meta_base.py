@@ -3,6 +3,7 @@ from abc import ABCMeta
 from colassigner.util import camel_to_snake
 
 from .constants import DEFAULT_PP, FORBIDDEN_NAMES, PREFIX_SEP
+from .type_hinting import get_return_hint
 
 
 class ColMeta(ABCMeta):
@@ -26,7 +27,6 @@ class ColMeta(ABCMeta):
         "so that Cls.xy returns a string for column access"
 
         att_value = super().__getattribute__(attid)
-
         if attid.startswith("_") or (attid in FORBIDDEN_NAMES):
             return att_value
 
@@ -39,8 +39,44 @@ class ColMeta(ABCMeta):
 
             return _C
 
-        return PREFIX_SEP.join(filter(None, new_pref_arr))
+        return_hint_str = get_hint_str(att_value)
+
+        return PREFIX_SEP.join(filter(None, (*new_pref_arr, return_hint_str)))
 
     def __getcoltype__(cls, attid):
         colval = super().__getattribute__(attid.split(PREFIX_SEP)[-1])
         return colval
+
+
+def get_all_cols(cls: ColMeta):
+    """returns a list of strings of all columns given by the type
+
+    can also be used for nested structues of columns
+    """
+    out = []
+    for attid in dir(cls):
+        if attid.startswith("_"):
+            continue
+        attval = getattr(cls, attid)
+        if isinstance(attval, ColMeta):
+            out += get_all_cols(attval)
+            continue
+        if isinstance(cls, ColMeta):
+            out.append(attval)
+    return out
+
+
+def get_att_value(accessor: ColMeta, attname: str):
+    """get the true assigned value for the class attribute"""
+    return accessor.__getcoltype__(attname)
+
+
+def get_hint_str(val):
+    return_hint = get_return_hint(val)
+    if isinstance(return_hint, ColMeta):
+        cols = get_all_cols(return_hint)
+        if len(cols) != 1:
+            raise ValueError(f"cols in {return_hint} is not 1 : {cols}")
+        return cols[0]
+    if isinstance(return_hint, str):
+        return return_hint
