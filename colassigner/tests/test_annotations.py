@@ -39,7 +39,7 @@ def test_wrong_annotations():
 
         class Wrong(ColAssigner):
             def c1(self, _) -> int:
-                pass
+                pass  # pragma: no cover
 
         Wrong.c1
 
@@ -47,6 +47,6 @@ def test_wrong_annotations():
 
         class Wrong2(ColAssigner):
             def thing(self, _) -> Col[Multi]:
-                pass
+                pass  # pragma: no cover
 
         Wrong2.thing
