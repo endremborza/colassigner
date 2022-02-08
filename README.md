@@ -13,3 +13,4 @@ things to think about:
 - pivot table: data content based columns
   - enum type support
 - changing record entity type
+- partial inheritance / composite types
