@@ -43,9 +43,16 @@ class ColMeta(ABCMeta):
 
         return PREFIX_SEP.join(filter(None, (*new_pref_arr, return_hint_str)))
 
+    def __repr__(cls) -> str:
+        base = super().__repr__()
+        return base + f" ({', '.join(cls.__col_dir__())})"
+
     def __getcoltype__(cls, attid):
         colval = super().__getattribute__(attid.split(PREFIX_SEP)[-1])
         return colval
+
+    def __col_dir__(cls):
+        return [k for k in dir(cls) if not k.startswith("_")]
 
 
 def get_all_cols(cls: ColMeta):
@@ -54,9 +61,7 @@ def get_all_cols(cls: ColMeta):
     can also be used for nested structues of columns
     """
     out = []
-    for attid in dir(cls):
-        if attid.startswith("_"):
-            continue
+    for attid in cls.__col_dir__():
         attval = getattr(cls, attid)
         if isinstance(attval, ColMeta):
             out += get_all_cols(attval)
