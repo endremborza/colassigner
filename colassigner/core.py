@@ -13,21 +13,21 @@ class ColAccessor(metaclass=ColMeta):
 
     e. g.
 
-    class LocationCols(ColAccessor):
-        lon = float
-        lat = float
+    >>> class LocationCols(ColAccessor):
+    ...     lon = float
+    ...     lat = float
 
-    class TableCols(ColAccessor):
-        col1 = int
-        col2 = str
-        foreign_key1 = "name_of_key"
-
-        class NestedCols(ColAccessor):
-            s = str
-            x = float
-
-        start_loc = LocationCols
-        end_loc = LocationCols
+    >>> class TableCols(ColAccessor):
+    ...     col1 = int
+    ...     col2 = str
+    ...     foreign_key1 = "name_of_key"
+    ...
+    ...     class NestedCols(ColAccessor):
+    ...         s = str
+    ...         x = float
+    ...
+    ...     start_loc = LocationCols
+    ...     end_loc = LocationCols
 
     >>> TableCols.start_loc.lat
     'start_loc__lat'
