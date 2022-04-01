@@ -1,1 +1,3 @@
-from ._version import __version__  # noqa: F401
+"""Helper for assigning and accessing pandas columns"""
+
+__version__ = "0.0.0"

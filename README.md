@@ -5,4 +5,3 @@
 [![codecov](https://img.shields.io/codecov/c/github/endremborza/colassigner)](https://codecov.io/gh/endremborza/colassigner)
 [![pypi](https://img.shields.io/pypi/v/colassigner.svg)](https://pypi.org/project/colassigner/)
 
-add keywords to pyproject.toml
