@@ -121,16 +121,14 @@ def test_subassigner_data_reuse():
             main_col = "c"
 
         def prod(self, df):
-            return df.loc[
-                :, [BaseCols.GbB.sides.lower, BaseCols.GbC.values]
-            ].prod(axis=1)
+            return df.loc[:, [BaseCols.GbB.sides.lower, BaseCols.GbC.values]].prod(
+                axis=1
+            )
 
     df1 = pd.DataFrame({"cat": ["x", "y", "y"], "num": [2, 3, 4]})
     # add mean of category, with lower and upper bounds
     # for 2 different columns, add product of two of these
-    df2 = pd.DataFrame({"b": ["x", "y", "x"], "c": ["y", "y", "x"]}).pipe(
-        BaseCols(df1)
-    )
+    df2 = pd.DataFrame({"b": ["x", "y", "x"], "c": ["y", "y", "x"]}).pipe(BaseCols(df1))
 
     assert df2.loc[:, BaseCols.GbB.values].tolist() == [2, 3.5, 2]
     assert df2.loc[:, BaseCols.GbC.sides.lower].tolist() == [3, 3, 2]

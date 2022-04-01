@@ -20,6 +20,5 @@ def test_type_retention():
     assert get_att_value(TestCols, TestCols.fing) == int
     assert get_att_value(TestCols.SubCol, TestCols.SubCol.b) == float
     assert (
-        get_att_value(TestCols.SubCol.SubSubCol2, TestCols.SubCol.SubSubCol2.x)
-        == str
+        get_att_value(TestCols.SubCol.SubSubCol2, TestCols.SubCol.SubSubCol2.x) == str
     )

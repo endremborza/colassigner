@@ -31,12 +31,8 @@ def test_nested_accessor():
 
     assert Cols.fing == "fing"
     assert Cols.assigned_child.a == "assigned_child__a"
-    assert (
-        Cols.assigned_child.grandchild_a.x == "assigned_child__grandchild_a__x"
-    )
-    assert (
-        Cols.assigned_child.grandchild_b.y == "assigned_child__grandchild_b__y"
-    )
+    assert Cols.assigned_child.grandchild_a.x == "assigned_child__grandchild_a__x"
+    assert Cols.assigned_child.grandchild_b.y == "assigned_child__grandchild_b__y"
     assert Cols.InheritedChild.b == "inherited_child__b"
 
     assert get_all_cols(Cols) == [
