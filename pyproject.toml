@@ -1,18 +1,21 @@
 [project]
 name = "colassigner"
 dynamic = ["version", "description"]
-authors = [{name = "Endre Márk Borza", email = "FILL@ME"}]
+authors = [{name = "Endre Márk Borza", email = "endremborza@gmail.com"}]
 license = {file = "LICENSE"}
 readme = "README.md"
 requires-python = ">=3.7"
 dependencies = []
 
 [project.optional-dependencies]
-test = [ "branthebuilder"]
+test = ["branthebuilder"]
 doc = [
     "sphinx",
+    "pandoc",
     "graphviz",
     "sphinx-automodapi",
+    "sphinx-rtd-theme",
+    "myst-parser",
     "pygments",
     "jupyter",
     "toml"
