@@ -12,33 +12,48 @@ class MethodDef:
         self.name = stmt.name
         self.bases = set(bases)
         self.uses = set()
-        for inner in stmt.body:
-            self._add(inner)
+        self._adds(*stmt.body)
 
     def _add(self, elem: ast.AST):
-        if isinstance(elem, (ast.Assign, ast.Return, ast.keyword, ast.Index)):
+        if isinstance(elem, (ast.Assign, ast.Return, ast.keyword, ast.Index, ast.Expr)):
             return self._add(elem.value)
+        if isinstance(elem, ast.If):
+            return self._adds(elem.test, *elem.body, *elem.orelse)
+        if isinstance(elem, ast.For):
+            return self._adds(elem.iter, *elem.body)
+        if isinstance(elem, ast.Try):
+            return self._adds(*elem.handlers, *elem.body)
+        if isinstance(elem, ast.ExceptHandler):
+            return self._adds(*elem.body)
         if isinstance(elem, ast.ExtSlice):
-            return [*map(self._add, elem.dims)]
+            return self._adds(*elem.dims)
         if isinstance(elem, ast.Slice):
-            return self._add(elem.lower), self._add(elem.upper)
+            return self._adds(elem.lower, elem.upper)
         if isinstance(elem, ast.Attribute):
             base = elem.value
             if isinstance(base, ast.Name) and (base.id in [*self.bases, "self"]):
                 return self.uses.add(elem.attr)
             return self._add(base)
         if isinstance(elem, ast.Call):
-            [*map(self._add, elem.args + elem.keywords)]
+            self._adds(*elem.args, *elem.keywords)
             return self._add(elem.func)
         if isinstance(elem, ast.BinOp):
-            return self._add(elem.left), self._add(elem.right)
+            return self._adds(elem.left, elem.right)
         if isinstance(elem, ast.Subscript):
-            return self._add(elem.value), self._add(elem.slice)
-        if isinstance(elem, (ast.Constant, ast.Name)) or elem is None:
+            return self._adds(elem.value, elem.slice)
+        if isinstance(elem, ast.Compare):
+            return self._adds(elem.left, *elem.comparators)
+        if (
+            isinstance(elem, (ast.Constant, ast.Name, ast.Pass, ast.Raise))
+            or elem is None
+        ):
             return
-        ast.ExtSlice
+        raise ValueError(
+            f"unrecognized expression {type(elem)}: {elem}"
+        )  # pragma: no cover
 
-        raise ValueError(f"unrecognized expression {type(elem)}: {elem}")
+    def _adds(self, *args):
+        return [*map(self._add, args)]
 
 
 class ClsParser:
@@ -66,7 +81,7 @@ class ClsParser:
 
     def _resolve(self, source, resolved=()):
         for sub in self._resolvers.get(source, []):
-            if sub in resolved:
+            if sub in [source, *resolved]:
                 continue
             resolved = (sub, *resolved)
             if sub.startswith("_"):

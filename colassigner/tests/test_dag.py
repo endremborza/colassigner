@@ -1,7 +1,7 @@
 from colassigner import ColAssigner, get_dag
 
 
-class Cols(ColAssigner):
+class Cols(ColAssigner):  # pragma: no cover
     # TODO: nested
 
     def __init__(self):
@@ -23,12 +23,20 @@ class Cols(ColAssigner):
         return self._helper2(df, col=Cols.col_a) + self._helper3(df)
 
     def _helper(self, df, n):
+        if n > 100:
+            return self._helper(df, n / 2)
         return df.loc[:, Cols.col_b] * n
 
     def _helper2(self, df, col):
+        for _ in range(3):
+            pass
         return df[col] ** 2
 
     def _helper3(self, df):
+        try:
+            "boo"
+        except ValueError:
+            raise IndexError()
         return self._helper2(df, Cols.col_d) - self._helper(df, 3)
 
 
