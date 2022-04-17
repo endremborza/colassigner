@@ -15,8 +15,13 @@ class MethodDef:
         self._adds(*stmt.body)
 
     def _add(self, elem: ast.AST):
-        if isinstance(elem, (ast.Assign, ast.Return, ast.keyword, ast.Index, ast.Expr)):
+        if isinstance(
+            elem,
+            (ast.Assign, ast.Return, ast.keyword, ast.Index, ast.Expr, ast.Starred),
+        ):
             return self._add(elem.value)
+        if isinstance(elem, (ast.List, ast.Tuple)):
+            return self._adds(*elem.elts)
         if isinstance(elem, ast.If):
             return self._adds(elem.test, *elem.body, *elem.orelse)
         if isinstance(elem, ast.For):
@@ -25,6 +30,8 @@ class MethodDef:
             return self._adds(*elem.handlers, *elem.body)
         if isinstance(elem, ast.ExceptHandler):
             return self._adds(*elem.body)
+        if isinstance(elem, ast.Lambda):
+            return self._add(elem.body)
         if isinstance(elem, ast.ExtSlice):
             return self._adds(*elem.dims)
         if isinstance(elem, ast.Slice):

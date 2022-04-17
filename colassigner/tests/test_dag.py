@@ -25,7 +25,7 @@ class Cols(ColAssigner):  # pragma: no cover
     def _helper(self, df, n):
         if n > 100:
             return self._helper(df, n / 2)
-        return df.loc[:, Cols.col_b] * n
+        return df.loc[:, Cols.col_b].pipe(lambda s: s * 3)
 
     def _helper2(self, df, col):
         for _ in range(3):
