@@ -1,7 +1,5 @@
 import numpy as np
 
-from .meta_base import get_all_cols
-
 _T_COL = "__treated"
 
 
@@ -27,6 +25,8 @@ def measure_effect(assigner, base_df, cause_col, effect_col, treat_rate=0.2, see
 
 def _reset_atts(assigner_inst, reset_att, reset_val):
     # needed to preserve order
-    for c in get_all_cols(type(assigner_inst)):
+    for c in assigner_inst.__dir__():
+        if c.startswith("_"):
+            continue
         v = reset_val if c == reset_att else getattr(assigner_inst, c)
         setattr(assigner_inst, c, v)
