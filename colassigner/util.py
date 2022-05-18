@@ -5,6 +5,8 @@ nonswitch_rex = re.compile("[0-9]{2}")
 
 
 def camel_to_snake(cc_str):
+    if cc_str == cc_str.lower():
+        return cc_str
     out = cc_str
     for group in wswitch_rex.findall(cc_str):
         if nonswitch_rex.findall(group):
