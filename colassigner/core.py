@@ -1,3 +1,7 @@
+from functools import reduce
+
+import pandas as pd
+
 from .constants import PREFIX_SEP
 from .meta_base import ColMeta
 from .util import camel_to_snake
@@ -55,29 +59,29 @@ class ColAssigner(ColAccessor):
         chass1 = MyStaticChildAssigner
     """
 
-    def __call__(self, df, carried_prefixes=()):
+    def __call__(self, df: pd.DataFrame, carried_prefixes=()) -> pd.DataFrame:
         # dir() is alphabetised object.__dir__ is not
         # important here if assigned cols rely on each other
-        for attid in self.__dir__():
-            if attid.startswith("_"):
-                continue
-            att = getattr(self, attid)
-            new_pref_arr = (*carried_prefixes, camel_to_snake(attid))
-            if isinstance(att, ColMeta):
-                if ChildColAssigner in att.mro():
-                    inst = att(df, self)
-                else:
-                    inst = att()
-                df = inst(df, carried_prefixes=new_pref_arr)
-            elif callable(att):
-                col_name = getattr(type(self), attid)
-                colname = PREFIX_SEP.join((*carried_prefixes, col_name))
-                df = df.assign(**{colname: self._call_att(att, df)})
-        return df
+        return reduce(self._reducer, self.__dir__(), (df, carried_prefixes))[0]
 
     @staticmethod
     def _call_att(att, df):
         return att(df)
+
+    def _reducer(self, red_out: tuple[pd.DataFrame, tuple], attid: str):
+        if attid.startswith("_"):
+            return red_out
+        df, prefixes = red_out
+        att = getattr(self, attid)
+        if isinstance(att, ColMeta):
+            inst = att(df, self) if ChildColAssigner in att.mro() else att()
+            odf = inst(df, carried_prefixes=(*prefixes, camel_to_snake(attid)))
+        elif callable(att):
+            col_name = PREFIX_SEP.join((*prefixes, getattr(type(self), attid)))
+            odf = df.assign(**{col_name: self._call_att(att, df)})
+        else:
+            odf = df
+        return (odf, prefixes)
 
 
 class ChildColAssigner(ColAssigner):
@@ -89,7 +93,7 @@ class ChildColAssigner(ColAssigner):
     to the __init__ method as parameters
     """
 
-    def __init__(self, df, parent_assigner: ColAssigner) -> None:
+    def __init__(self, df: pd.DataFrame, parent_assigner: ColAssigner) -> None:
         pass
 
     @staticmethod

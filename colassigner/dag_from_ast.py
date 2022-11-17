@@ -15,52 +15,61 @@ class MethodDef:
         self._adds(*stmt.body)
 
     def _add(self, elem: ast.AST):
-        if isinstance(
-            elem,
-            (ast.Assign, ast.Return, ast.keyword, ast.Index, ast.Expr, ast.Starred),
-        ):
-            return self._add(elem.value)
-        if isinstance(elem, (ast.List, ast.Tuple)):
-            return self._adds(*elem.elts)
+        if isinstance(elem, ast.stmt):
+            self._add_stmt(elem)
+        elif isinstance(elem, ast.expr):
+            self._add_expr(elem)
+        else:
+            self._add_other(elem)
+
+    def _add_stmt(self, elem: ast.stmt):
+        basic_stmts = (ast.Assign, ast.Return, ast.keyword, ast.Expr, ast.Starred)
+        sub = ()
+        if isinstance(elem, basic_stmts):
+            sub = (elem.value,)
         if isinstance(elem, ast.If):
-            return self._adds(elem.test, *elem.body, *elem.orelse)
+            sub = (elem.test, *elem.body, *elem.orelse)
         if isinstance(elem, ast.For):
-            return self._adds(elem.iter, *elem.body)
+            sub = (elem.iter, *elem.body)
         if isinstance(elem, ast.Try):
-            return self._adds(*elem.handlers, *elem.body)
-        if isinstance(elem, ast.ExceptHandler):
-            return self._adds(*elem.body)
+            sub = (*elem.handlers, *elem.body)
+        # ast.Pass, ast.Raise ok
+        return self._adds(*sub)
+
+    def _add_expr(self, elem: ast.expr):
+        sub = ()
+        if isinstance(elem, (ast.List, ast.Tuple)):
+            sub = elem.elts
         if isinstance(elem, ast.Lambda):
-            return self._add(elem.body)
-        if isinstance(elem, ast.ExtSlice):
-            return self._adds(*elem.dims)
+            sub = [elem.body]
         if isinstance(elem, ast.Slice):
-            return self._adds(elem.lower, elem.upper)
+            sub = (elem.lower, elem.upper)
         if isinstance(elem, ast.Attribute):
             base = elem.value
             if isinstance(base, ast.Name) and (base.id in [*self.bases, "self"]):
                 return self.uses.add(elem.attr)
-            return self._add(base)
+            sub = [base]
         if isinstance(elem, ast.Call):
-            self._adds(*elem.args, *elem.keywords)
-            return self._add(elem.func)
+            sub = (elem.func, *elem.args, *elem.keywords)
         if isinstance(elem, ast.BinOp):
-            return self._adds(elem.left, elem.right)
+            sub = (elem.left, elem.right)
         if isinstance(elem, ast.Subscript):
-            return self._adds(elem.value, elem.slice)
+            sub = (elem.value, elem.slice)
         if isinstance(elem, ast.Compare):
-            return self._adds(elem.left, *elem.comparators)
-        if (
-            isinstance(elem, (ast.Constant, ast.Name, ast.Pass, ast.Raise))
-            or elem is None
-        ):
-            return
-        raise ValueError(
-            f"unrecognized expression {type(elem)}: {elem}"
-        )  # pragma: no cover
+            sub = (elem.left, *elem.comparators)
+        # ast.Constant, ast.Name ok
+        self._adds(*sub)
+
+    def _add_other(self, elem):
+        sub = ()
+        if isinstance(elem, ast.ExceptHandler):
+            sub = elem.body
+        if isinstance(elem, ast.keyword):
+            sub = [elem.value]
+        self._adds(*sub)
 
     def _adds(self, *args):
-        return [*map(self._add, args)]
+        return list(map(self._add, args))
 
 
 class ClsParser:

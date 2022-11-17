@@ -1,4 +1,4 @@
-from colassigner import ColAccessor, get_all_cols
+from colassigner import ColAccessor, get_all_cols, get_new_cols
 
 
 def test_flat_accessor():
@@ -72,3 +72,15 @@ def test_accessor_id_cols():
         foreign_key = IdCols.fing_id
 
     assert TableCols.foreign_key == "foreign_key"
+
+
+def test_partial_cols():
+    class BaseCols(ColAccessor):
+        a = int
+
+    class ExtCols(BaseCols):
+        b = str
+
+    assert get_all_cols(ExtCols) == ["a", "b"]
+    assert get_new_cols(BaseCols) == ["a"]
+    assert get_new_cols(ExtCols) == ["b"]

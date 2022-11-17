@@ -1,9 +1,10 @@
 from abc import ABCMeta
-
-from colassigner.util import camel_to_snake
+from functools import partial
+from itertools import chain
 
 from .constants import DEFAULT_PP, FORBIDDEN_NAMES, PREFIX_SEP
 from .type_hinting import get_return_hint
+from .util import camel_to_snake
 
 
 class ColMeta(ABCMeta):
@@ -54,21 +55,31 @@ class ColMeta(ABCMeta):
     def __col_dir__(cls):
         return [k for k in dir(cls) if not k.startswith("_")]
 
+    def __col_dir_sub__(cls):
+        return [k for k in cls.__dict__.keys() if not k.startswith("_")]
+
 
 def get_all_cols(cls: ColMeta):
     """returns a list of strings of all columns given by the type
 
     can also be used for nested structues of columns
     """
-    out = []
-    for attid in cls.__col_dir__():
-        attval = getattr(cls, attid)
-        if isinstance(attval, ColMeta):
-            out += get_all_cols(attval)
-            continue
-        if isinstance(cls, ColMeta):
-            out.append(attval)
-    return out
+    return _expand_attid(cls, cls.__col_dir__())
+
+
+def get_new_cols(cls: ColMeta):
+    return _expand_attid(cls, cls.__col_dir_sub__())
+
+
+def _expand_attid(cls: ColMeta, attlist: list):
+    return list(chain(*map(partial(_iter_att_id, cls), attlist)))
+
+
+def _iter_att_id(cls, attid):
+    attval = getattr(cls, attid)
+    if isinstance(attval, ColMeta):
+        return get_all_cols(attval)
+    return [attval]
 
 
 def get_att_value(accessor: ColMeta, attname: str):
