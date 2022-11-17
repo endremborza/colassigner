@@ -4,22 +4,12 @@ dynamic = ["version", "description"]
 authors = [{name = "Endre Márk Borza", email = "endremborza@gmail.com"}]
 license = {file = "LICENSE"}
 readme = "README.md"
-requires-python = ">=3.8"
-dependencies = []
+requires-python = ">=3.10"
+dependencies = [pandas]
 
 [project.optional-dependencies]
-test = ["branthebuilder", "pandas"]
-doc = [
-    "sphinx",
-    "pandoc",
-    "graphviz",
-    "sphinx-automodapi",
-    "sphinx-rtd-theme",
-    "myst-parser",
-    "pygments",
-    "jupyter",
-    "toml"
-]
+test = ["branthebuilder"]
+doc = ["branthebuilder[doc]"]
 
 [project.urls]
 Homepage = "https://github.com/endremborza/colassigner"
