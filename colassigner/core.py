@@ -62,11 +62,14 @@ class ColAssigner(ColAccessor):
     def __call__(self, df: pd.DataFrame, carried_prefixes=()) -> pd.DataFrame:
         # dir() is alphabetised object.__dir__ is not
         # important here if assigned cols rely on each other
-        return reduce(self._reducer, self.__dir__(), (df, carried_prefixes))[0]
+        return self._assign_cols(self.__dir__(), df, carried_prefixes)
 
     @staticmethod
     def _call_att(att, df):
         return att(df)
+
+    def _assign_cols(self, cols, df, carried_prefixes):
+        return reduce(self._reducer, cols, (df, carried_prefixes))[0]
 
     def _reducer(self, red_out: tuple[pd.DataFrame, tuple], attid: str):
         if attid.startswith("_"):
