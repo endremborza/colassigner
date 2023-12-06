@@ -5,14 +5,12 @@ from colassigner import Col, ColAccessor, ColAssigner, get_all_cols
 
 
 class Multi(ColAccessor):
-
     a = int
     b = float
 
 
 def test_simple_annotation_assigner():
     class Simple(ColAccessor):
-
         ixx = str
 
     class Cas(ColAssigner):

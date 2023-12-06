@@ -3,7 +3,6 @@ from colassigner import ColAccessor, get_att_value
 
 def test_type_retention():
     class TestCols(ColAccessor):
-
         fing = int
 
         class SubCol(ColAccessor):
