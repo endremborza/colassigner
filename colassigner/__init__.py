@@ -8,4 +8,4 @@ from .meta_base import get_all_cols, get_att_value, get_new_cols
 from .type_hinting import Col
 from .util import camel_to_snake
 
-__version__ = "0.4.1"
+__version__ = "0.4.2"

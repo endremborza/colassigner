@@ -1,10 +1,13 @@
 from abc import ABCMeta
 from functools import partial
 from itertools import chain
+from typing import TypeVar
 
 from .constants import DEFAULT_PP, FORBIDDEN_NAMES, PREFIX_SEP
 from .type_hinting import get_return_hint
 from .util import camel_to_snake
+
+T = TypeVar("T")
 
 
 class ColMeta(ABCMeta):
@@ -47,6 +50,16 @@ class ColMeta(ABCMeta):
     def __repr__(cls) -> str:
         base = super().__repr__()
         return base + f" ({', '.join(cls.__col_dir__())})"
+
+    def __getitem__(cls: T, k) -> T:
+        class _C(cls):
+            _parent_prefixes = (
+                *cls._parent_prefixes,
+                camel_to_snake(cls.__name__),
+                str(k),
+            )
+
+        return _C
 
     def __getcoltype__(cls, attid):
         colval = super().__getattribute__(attid.split(PREFIX_SEP)[-1])

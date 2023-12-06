@@ -10,6 +10,13 @@ def test_flat_accessor():
     assert Cols.a == "a"
 
 
+def test_indexed_Accessor():
+    class Thing(ColAccessor):
+        x = int
+
+    assert Thing[10].x == "thing__10__x"
+
+
 def test_nested_accessor():
     class GrandChildCols(ColAccessor):
         x = str
@@ -22,7 +29,6 @@ def test_nested_accessor():
         grandchild_b = GrandChildCols
 
     class Cols(ColAccessor):
-
         fing = int
         assigned_child = ChildCols
 
@@ -63,12 +69,10 @@ def test_nested_accessor():
 
 def test_accessor_id_cols():
     class IdCols(ColAccessor):
-
         fing_id = int
         other_id = str
 
     class TableCols(ColAccessor):
-
         foreign_key = IdCols.fing_id
 
     assert TableCols.foreign_key == "foreign_key"
